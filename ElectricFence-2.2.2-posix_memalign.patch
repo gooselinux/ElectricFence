@@ -1,0 +1,41 @@
+diff -up /home/petr/fedora/ElectricFence/devel/ElectricFence-2.2.2/efence.c\~ /home/petr/fedora/ElectricFence/devel/ElectricFence-2.2.2/efence.c
+--- ElectricFence-2.2.2/efence.c~	2010-01-11 20:58:43.000000000 +0100
++++ ElectricFence-2.2.2/efence.c	2010-06-24 14:38:54.000000000 +0200
+@@ -38,6 +38,7 @@
+ # include <pthread.h>
+ # include <semaphore.h>
+ #endif
++#include <errno.h>
+ 
+ #ifdef	malloc
+ #undef	malloc
+@@ -703,6 +704,27 @@ memalign(size_t alignment, size_t userSi
+ 	return address;
+ }
+ 
++extern C_LINKAGE int
++posix_memalign(void **memptr, size_t alignment, size_t userSize)
++{
++	/*
++	 * Per standard, posix_memalign returns EINVAL when alignment
++	 * is not a power of two or power of sizeof(void*).  efence
++	 * doesn't check the value of alignment in memalign, but then
++	 * again, memalign was never specified very well, and on some
++	 * systems odd alignments could indeed have been allowed.
++	 */
++	if ((alignment & (alignment - 1))
++	    || alignment % sizeof (void *))
++		return EINVAL;
++
++	void *ptr = memalign (alignment, userSize);
++	if (ptr == NULL)
++		return ENOMEM;
++	*memptr = ptr;
++	return 0;
++}
++
+ /*
+  * Find the slot structure for a user address.
+  */
+
+Diff finished.  Thu Jun 24 14:52:24 2010
